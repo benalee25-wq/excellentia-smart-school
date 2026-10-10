@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apply for admission</title>
+<link rel="stylesheet" href="assets/css/app.css">
+<style>main{max-width:640px;margin:0 auto;padding:1.2rem}</style>
+</head>
+<body>
+<main>
+  <h1>Apply for admission</h1>
+  <p class="muted" id="intro">Fill in the form. You will get a reference number to track your application.</p>
+  <div class="panel">
+    <form id="f" novalidate>
+      <div class="row"><div><label for="fn">Child's first name *</label><input id="fn" required maxlength="80"></div><div><label for="ln">Child's last name *</label><input id="ln" required maxlength="80"></div></div>
+      <div class="row"><div><label for="gd">Gender</label><select id="gd"><option value="">Not stated</option><option value="male">Male</option><option value="female">Female</option></select></div><div><label for="dob">Date of birth</label><input id="dob" type="date"></div><div><label for="cl">Class applying for</label><input id="cl" maxlength="40" placeholder="e.g. JSS1"></div></div>
+      <div class="row"><div><label for="gn">Parent/guardian name *</label><input id="gn" required maxlength="120"></div><div><label for="gp">Phone number *</label><input id="gp" inputmode="tel" required></div></div>
+      <label for="ge">Email (optional)</label><input id="ge" type="email">
+      <label for="nt">Anything else we should know?</label><input id="nt" maxlength="1000">
+      <p class="muted">We use these details only to process this application, in line with the Nigeria Data Protection Act.</p>
+      <div id="m" role="status"></div>
+      <button class="btn" style="width:100%">Submit application</button>
+    </form>
+  </div>
+  <div class="panel">
+    <h2>Check an application</h2>
+    <form id="cf" class="row"><div><label for="cr">Reference number</label><input id="cr" placeholder="APP-2026-00001"></div><div><label for="cp">Phone used</label><input id="cp" inputmode="tel"></div><div><button class="btn ghost">Check status</button></div></form>
+    <div id="cm" role="status"></div>
+  </div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="assets/js/config.js"></script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s), cfg=window.SSMS_CONFIG||{};
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const say=(el,t,k)=>el.innerHTML=t?`<div class="msg ${k||'err'}">${t}</div>`:'';
+  const slug=new URLSearchParams(location.search).get('school')||'';
+  const LABEL={submitted:'Submitted',under_review:'Under review',approved:'Approved',rejected:'Not successful',enrolled:'Admitted and enrolled'};
+  if(!cfg.SUPABASE_URL||cfg.SUPABASE_URL.includes('YOUR-PROJECT')||!slug){say($('#m'),!slug?'This link is missing the school code. Ask the school for the correct link.':'Setup needed: add your Supabase details in assets/js/config.js.');$('#f button').disabled=true;return;}
+  const sb=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
+  $('#f').onsubmit=async e=>{
+    e.preventDefault();const btn=e.submitter;
+    if(!$('#fn').value.trim()||!$('#ln').value.trim()||!$('#gn').value.trim()||$('#gp').value.trim().length<7)return say($('#m'),'Please fill in every field marked *.');
+    btn.disabled=true;
+    const {data,error}=await sb.rpc('submit_application',{p_slug:slug,p_first:$('#fn').value,p_last:$('#ln').value,p_gender:$('#gd').value,p_dob:$('#dob').value||null,p_class:$('#cl').value,p_guardian:$('#gn').value,p_phone:$('#gp').value,p_email:$('#ge').value,p_notes:$('#nt').value});
+    btn.disabled=false;
+    if(error)return say($('#m'),esc(error.message));
+    $('#f').reset();say($('#m'),'Application received. Your reference number is <strong>'+esc(data)+'</strong>. Keep it, with the phone number you used, to check your status.','ok');
+  };
+  $('#cf').onsubmit=async e=>{
+    e.preventDefault();
+    const {data,error}=await sb.rpc('check_application',{p_ref:$('#cr').value,p_phone:$('#cp').value});
+    if(error)return say($('#cm'),esc(error.message));
+    say($('#cm'),data?'Status: <strong>'+esc(LABEL[data]||data)+'</strong>':'No application matches that reference and phone number.',data?'ok':'err');
+  };
+})();
+</script>
+</body>
+</html>
