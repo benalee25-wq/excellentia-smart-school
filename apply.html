@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Apply for admission</title>
-<link rel="stylesheet" href="assets/css/app.css">
+<link rel="stylesheet" href="app.css">
 <style>main{max-width:640px;margin:0 auto;padding:1.2rem}</style>
 </head>
 <body>
@@ -30,7 +30,7 @@
   </div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="assets/js/config.js"></script>
+<script src="config.js"></script>
 <script>
 (function(){
   const $=s=>document.querySelector(s), cfg=window.SSMS_CONFIG||{};
@@ -38,7 +38,7 @@
   const say=(el,t,k)=>el.innerHTML=t?`<div class="msg ${k||'err'}">${t}</div>`:'';
   const slug=new URLSearchParams(location.search).get('school')||'';
   const LABEL={submitted:'Submitted',under_review:'Under review',approved:'Approved',rejected:'Not successful',enrolled:'Admitted and enrolled'};
-  if(!cfg.SUPABASE_URL||cfg.SUPABASE_URL.includes('YOUR-PROJECT')||!slug){say($('#m'),!slug?'This link is missing the school code. Ask the school for the correct link.':'Setup needed: add your Supabase details in assets/js/config.js.');$('#f button').disabled=true;return;}
+  if(!cfg.SUPABASE_URL||cfg.SUPABASE_URL.includes('YOUR-PROJECT')||!slug){say($('#m'),!slug?'This link is missing the school code. Ask the school for the correct link.':'Setup needed: add your Supabase details in config.js.');$('#f button').disabled=true;return;}
   const sb=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
   $('#f').onsubmit=async e=>{
     e.preventDefault();const btn=e.submitter;
