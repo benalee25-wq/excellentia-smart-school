@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Excellentia Smart School</title>
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+
+<!-- Sign in / sign up / recovery -->
+<section id="auth" class="auth hidden">
+  <div class="auth-brand">
+    <h1>Excellentia Smart School</h1>
+    <p>One secure place for students, teachers, parents and school owners.</p>
+  </div>
+  <div class="auth-card">
+    <form id="authForm" novalidate>
+      <h2 id="authTitle">Sign in</h2>
+      <div id="nameWrap" class="hidden"><label for="fullName">Full name</label><input id="fullName" autocomplete="name"></div>
+      <label for="email">Email</label><input id="email" type="email" autocomplete="email" required>
+      <div id="passWrap"><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" minlength="8" required></div>
+      <div id="authMsg" role="status"></div>
+      <button class="btn" id="authBtn" style="width:100%;margin-top:.6rem">Sign in</button>
+      <p style="margin-top:1rem">
+        <button type="button" class="linkbtn" id="toggleMode">Create an account</button><br>
+        <button type="button" class="linkbtn" id="forgotBtn">Forgot password?</button>
+      </p>
+    </form>
+    <form id="newPassForm" class="hidden" novalidate>
+      <h2>Set a new password</h2>
+      <label for="newPass">New password (8+ characters)</label>
+      <input id="newPass" type="password" minlength="8" autocomplete="new-password" required>
+      <div id="newPassMsg" role="status"></div>
+      <button class="btn" style="width:100%;margin-top:.6rem">Save password</button>
+    </form>
+  </div>
+</section>
+
+<!-- App shell -->
+<div id="app" class="app hidden">
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+    <div class="brand"><div class="logo" id="schoolLogo">E</div><span class="t" id="schoolName">School</span></div>
+    <nav class="nav" id="nav"></nav>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <button class="btn ghost" id="menuBtn" aria-label="Toggle menu">☰</button>
+      <select id="ctxSel" aria-label="School and role"></select>
+      <select id="sessSel" aria-label="Academic session"></select>
+      <select id="termSel" aria-label="Term"></select>
+      <input id="search" type="search" class="grow" placeholder="Search this page" aria-label="Search this page">
+      <button class="btn ghost" id="bellBtn" aria-label="Notifications">🔔</button>
+      <button class="btn ghost" id="userBtn" aria-label="Account menu">👤</button>
+    </header>
+    <div id="bellMenu" class="menu hidden"><strong>Notifications</strong><p class="muted">Nothing here yet. Alerts for attendance, fees and announcements arrive in a later phase.</p></div>
+    <div id="userMenu" class="menu hidden">
+      <div id="userInfo" class="muted" style="margin-bottom:.5rem"></div>
+      <button class="btn ghost" id="themeBtn" style="width:100%;margin-bottom:.4rem">Switch light / dark</button>
+      <button class="btn ghost" id="acctBtn" style="width:100%;margin-bottom:.4rem">Account settings</button>
+      <button class="btn danger" id="outBtn" style="width:100%">Sign out</button>
+    </div>
+    <main class="content" id="view" tabindex="-1"></main>
+  </div>
+</div>
+<div id="scrim" class="scrim hidden"></div>
+
+<dialog id="confirmDlg">
+  <form method="dialog">
+    <p id="confirmText"></p>
+    <div class="row" style="justify-content:flex-end">
+      <button class="btn ghost" value="no">Cancel</button>
+      <button class="btn danger" value="yes">Confirm</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/phase2.js"></script>
+</body>
+</html>
