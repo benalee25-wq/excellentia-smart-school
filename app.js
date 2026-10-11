@@ -19,6 +19,7 @@
       d.onclose = () => res(d.returnValue === "yes"); d.showModal();
     });
   }
+  const slugify = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
   const isManager = () => st.ctx && MANAGERS.includes(st.ctx.role);
   const schoolId = () => st.ctx && st.ctx.school && st.ctx.school.id;
   const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("en-NG", { year: "numeric", month: "short", day: "numeric" }) : "");
@@ -188,13 +189,20 @@
 
   views.schools = async function () {
     const v = $("#view");
-    v.innerHTML = `<h1>Schools</h1><div class="panel"><h2>Register a school</h2><form id="f" class="row"><div><label for="sn">School name</label><input id="sn" required></div><div><label for="ss">Short code (a-z, 0-9, -)</label><input id="ss" pattern="[a-z0-9-]{2,60}" required></div><div><button class="btn">Create school</button></div></form><div id="m"></div></div><div class="panel" id="list"></div>`;
+    v.innerHTML = `<h1>Schools</h1><div class="panel"><h2>Register a school</h2><form id="f" class="row"><div><label for="sn">School name</label><input id="sn" required></div><div><label for="ss">Short code (a-z, 0-9, -)</label><input id="ss" required maxlength="60" autocapitalize="none" autocomplete="off" spellcheck="false"></div><div><button class="btn">Create school</button></div></form><div id="m"></div></div><div class="panel" id="list"></div>`;
     const { data, error } = await sb.from("schools").select("*").order("name"); if (error) throw error;
     mountTable($("#list"), [{ k: "name", label: "School" }, { k: "slug", label: "Code" }, { k: "status", label: "Status" }, { k: "created_at", label: "Created", text: (x) => fmtDate(x.created_at) }], data, "No schools yet. Register the first one above.");
+    let touched = false;
+    $("#ss").oninput = () => { touched = true; };
+    $("#ss").onblur = () => { $("#ss").value = slugify($("#ss").value); };
+    $("#sn").oninput = () => { if (!touched) $("#ss").value = slugify($("#sn").value); };
     $("#f").onsubmit = async (e) => {
-      e.preventDefault(); const name = $("#sn").value.trim(), slug = $("#ss").value.trim().toLowerCase();
+      e.preventDefault(); const name = $("#sn").value.trim(), slug = slugify($("#ss").value);
+      $("#ss").value = slug;
+      if (name.length < 2) return msg($("#m"), "Enter the school name.");
+      if (!/^[a-z0-9-]{2,60}$/.test(slug)) return msg($("#m"), "The short code needs at least 2 characters: lowercase letters, numbers or hyphens only.");
       const { error } = await sb.from("schools").insert({ name, slug });
-      if (error) return msg($("#m"), error.code === "23505" ? "That short code is already used." : friendly(error));
+      if (error) return msg($("#m"), error.code === "23505" ? "That short code is already used. Try another." : friendly(error));
       await loadContext(); go("schools");
     };
   };
