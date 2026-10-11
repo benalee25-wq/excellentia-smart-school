@@ -188,6 +188,7 @@
       const f = await sb().rpc("class_form_teacher", { p_class: classId }); ftName = f.data || "";
       if (!mgr && isTeacher && cls.data && cls.data.form_teacher_id) { const me = await sb().from("staff").select("id").eq("user_id", st.user.id).eq("school_id", sid()).maybeSingle(); canComment = !!(me.data && me.data.id === cls.data.form_teacher_id); }
     }
+    let att = null; try { const a = await sb().rpc("attendance_summary", { p_student: rc.student, p_term: rc.term }); if (!a.error && a.data && a.data[0]) att = a.data[0]; } catch (e) {}
     const rows = [...sc.data].sort((a, b) => (sn[a.subject_id] || "").localeCompare(sn[b.subject_id] || ""));
     const ga = sd ? gradeFor(Number(sd.average), scale) : { grade: "", remark: "" };
     const published = c.status === "published", sch = st.ctx.school, tm = st.terms.find((x) => x.id === rc.term);
@@ -199,6 +200,7 @@
     <p style="margin-top:1rem"><strong>${esc(fullName(s))}</strong> · Admission no. ${esc(s.admission_no)}<br>Class: ${esc(cls.data ? clsLabel(cls.data) : "—")}${sd ? ` · Position: ${esc(ord(sd.rank_pos))} of ${esc(sd.class_size)}` : ""}</p>
     ${rows.length ? `<div class="tablewrap"><table><thead><tr><th>Subject</th><th>CA1<br><small>20</small></th><th>CA2<br><small>20</small></th><th>Exam<br><small>60</small></th><th>Total<br><small>100</small></th><th>Grade</th><th>Remark</th></tr></thead><tbody>${rows.map((r) => { const g = gradeFor(Number(r.total), scale); return `<tr><td>${esc(sn[r.subject_id] || "Subject")}</td><td>${esc(fmt(r.ca1))}</td><td>${esc(fmt(r.ca2))}</td><td>${esc(fmt(r.exam))}</td><td><strong>${esc(fmt(r.total))}</strong></td><td>${esc(g.grade)}</td><td>${esc(g.remark)}</td></tr>`; }).join("")}</tbody></table></div>
     ${sd ? `<p style="margin-top:.8rem">Subjects: <strong>${sd.subjects}</strong> · Total: <strong>${esc(fmt(sd.total))}</strong> · Average: <strong>${esc(fmt(sd.average))}</strong> · Overall grade: <strong>${esc(ga.grade)}</strong> (${esc(ga.remark)})</p>` : ""}` : `<div class="empty">No scores recorded for this term.</div>`}
+    ${att && att.days_open > 0 ? `<p>Attendance: present <strong>${att.present + att.late}</strong> of <strong>${att.days_open}</strong> school days (${Math.round(((att.present + att.late) / att.days_open) * 100)}%)${att.late ? `, including ${att.late} late` : ""}.</p>` : ""}
     <p><strong>Class teacher's comment:</strong> ${esc(c.teacher_comment || "—")}</p><p><strong>Principal's comment:</strong> ${esc(c.principal_comment || "—")}</p>
     <p class="muted" style="font-size:.8rem">Grading key: ${scale.map((b) => `${esc(b.grade)} ${esc(b.min_score)}–${esc(b.max_score)}`).join(" · ")}</p>
     <div style="display:flex;gap:2rem;margin-top:2.4rem">${sig("Class teacher" + (ftName ? ": " + esc(ftName) : ""))}${sig("Principal")}${sig("Date")}</div>
