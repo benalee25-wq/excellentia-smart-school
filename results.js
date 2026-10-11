@@ -159,8 +159,11 @@
     $("#f").onsubmit = async (e) => {
       e.preventDefault(); const row = { name: $("#pn").value.trim(), motto: $("#pm").value.trim() || null, address: $("#pa").value.trim() || null, phone: $("#pp").value.trim() || null, email: $("#pe").value.trim() || null };
       if (row.name.length < 2) return msg($("#m"), "Enter the school name.");
-      const r = await sb().from("schools").update(row).eq("id", sid()); if (r.error) return msg($("#m"), friendly(r.error));
-      Object.assign(st.ctx.school, row); S.go("schoolprofile");
+      const show = (t, k) => { msg($("#m"), t, k); $("#m").scrollIntoView({ block: "center", behavior: "smooth" }); };
+      const r = await sb().from("schools").update(row).eq("id", sid()).select("id");
+      if (r.error) return show(/motto/i.test(r.error.message) ? "The database is missing the latest update. Run 004_form_teacher.sql in Supabase, then try again." : friendly(r.error));
+      if (!r.data || !r.data.length) return show("Nothing was saved. You may not have permission to edit this school.");
+      Object.assign(st.ctx.school, row); await S.go("schoolprofile"); show("School profile saved.", "ok");
     };
   };
 
