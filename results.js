@@ -16,7 +16,7 @@
     if (!state.ctx || !state.ctx.school) return;
     const r = state.ctx.role;
     if (isManager() || r === "teacher") items.push(["scoreentry", "✏️", "Score entry"], ["results", "📊", "Results"]);
-    if (isManager()) items.push(["grading", "🏅", "Grading scale"]);
+    if (isManager()) items.push(["grading", "🏅", "Grading scale"], ["formteachers", "👩‍🏫", "Form teachers"], ["schoolprofile", "🏫", "School profile"]);
     if (r === "parent" || r === "student") items.push(["myreports", "📄", "Report cards"]);
   });
 
@@ -97,13 +97,13 @@
     v.innerHTML = `<h1>Results</h1><p class="muted">${esc(termName(st.termId))}</p><div class="panel"><div class="row"><div><label for="cl">Class</label><select id="cl">${scope.classes.map((c) => `<option value="${c.id}">${esc(clsLabel(c))}</option>`).join("")}</select></div></div><div id="m"></div><div id="info" class="muted" style="margin-top:.6rem"></div><div id="list" style="margin-top:.8rem"></div></div>`;
     async function load() {
       const cid = $("#cl").value; $("#list").innerHTML = `<p><span class="spin"></span> Loading…</p>`;
-      const [res, stu, rc] = await Promise.all([sb().rpc("class_results", { p_class: cid, p_term: st.termId }), sb().from("students").select("id, first_name, last_name, admission_no").eq("current_class_id", cid).is("deleted_at", null), sb().from("report_cards").select("student_id, status").eq("class_id", cid).eq("term_id", st.termId)]);
+      const [res, stu, rc] = await Promise.all([sb().rpc("class_results", { p_class: cid, p_term: st.termId }), sb().from("students").select("id, first_name, last_name, admission_no").eq("current_class_id", cid).is("deleted_at", null), sb().from("report_cards").select("student_id, status, teacher_comment, principal_comment").eq("class_id", cid).eq("term_id", st.termId)]);
       if (res.error) return ($("#list").innerHTML = ""), msg($("#m"), friendly(res.error)); if (stu.error) return msg($("#m"), friendly(stu.error));
-      const nm = Object.fromEntries(stu.data.map((s) => [s.id, s])), status = Object.fromEntries((rc.data || []).map((r) => [r.student_id, r.status]));
-      const rows = res.data.map((r) => ({ ...r, name: nm[r.student_id] ? fullName(nm[r.student_id]) : "Former student", adm: nm[r.student_id] ? nm[r.student_id].admission_no : "", status: status[r.student_id] || "draft" }));
-      const pub = rows.filter((r) => r.status === "published").length;
-      $("#info").innerHTML = `${rows.length} student${rows.length === 1 ? "" : "s"} with scores · ${pub} published` + (mgr && rows.length ? `<div class="row" style="margin-top:.6rem"><div><button class="btn" id="pubAll">Publish all to parents &amp; students</button></div><div><button class="btn ghost" id="unpubAll">Unpublish all</button></div></div>` : "");
-      mountTable($("#list"), [{ k: "rank_pos", label: "Position", text: (x) => ord(x.rank_pos) }, { k: "name", label: "Student" }, { k: "subjects", label: "Subjects" }, { k: "total", label: "Total" }, { k: "average", label: "Average" }, { k: "g", label: "Grade", text: (x) => gradeFor(Number(x.average), scale).grade }, { k: "status", label: "Status", text: (x) => (x.status === "published" ? "Published" : "Draft") }], rows, "No scores entered for this class and term yet.", (x) => `<button class="btn ghost" data-rc="${x.student_id}">Report card</button>`);
+      const nm = Object.fromEntries(stu.data.map((s) => [s.id, s])), status = Object.fromEntries((rc.data || []).map((r) => [r.student_id, r.status])), cm = Object.fromEntries((rc.data || []).map((r) => [r.student_id, r]));
+      const rows = res.data.map((r) => ({ ...r, name: nm[r.student_id] ? fullName(nm[r.student_id]) : "Former student", adm: nm[r.student_id] ? nm[r.student_id].admission_no : "", status: status[r.student_id] || "draft", tc: !!(cm[r.student_id] && cm[r.student_id].teacher_comment), pc: !!(cm[r.student_id] && cm[r.student_id].principal_comment) }));
+      const pub = rows.filter((r) => r.status === "published").length, noT = rows.filter((r) => !r.tc).length, noP = rows.filter((r) => !r.pc).length;
+      $("#info").innerHTML = `${rows.length} student${rows.length === 1 ? "" : "s"} with scores · ${pub} published · comments missing: ${noT} teacher, ${noP} principal` + (mgr && rows.length ? `<div class="row" style="margin-top:.6rem"><div><button class="btn" id="pubAll">Publish all to parents &amp; students</button></div><div><button class="btn ghost" id="unpubAll">Unpublish all</button></div></div>` : "");
+      mountTable($("#list"), [{ k: "rank_pos", label: "Position", text: (x) => ord(x.rank_pos) }, { k: "name", label: "Student" }, { k: "subjects", label: "Subjects" }, { k: "total", label: "Total" }, { k: "average", label: "Average" }, { k: "g", label: "Grade", text: (x) => gradeFor(Number(x.average), scale).grade }, { k: "cm", label: "Comments", text: (x) => `${x.tc ? "Teacher ✓" : "Teacher –"} · ${x.pc ? "Principal ✓" : "Principal –"}` }, { k: "status", label: "Status", text: (x) => (x.status === "published" ? "Published" : "Draft") }], rows, "No scores entered for this class and term yet.", (x) => `<button class="btn ghost" data-rc="${x.student_id}">Report card</button>`);
       $("#list")._rows = rows;
       if (mgr && rows.length) {
         $("#pubAll").onclick = async () => { if (!(await confirmBox("Publish this class's results? Parents and students will be able to see them."))) return; const r = await sb().rpc("set_report_status", { p_class: cid, p_term: st.termId, p_status: "published" }); if (r.error) return msg($("#m"), friendly(r.error)); msg($("#m"), "Results published.", "ok"); load(); };
@@ -139,10 +139,35 @@
     draw();
   };
 
+  // ---------- Form teachers ----------
+  views.formteachers = async function () {
+    const v = $("#view");
+    const [cl, staff] = await Promise.all([sb().from("classes").select("*").eq("school_id", sid()).order("name"), sb().from("staff").select("id, full_name").eq("school_id", sid()).neq("status", "left").order("full_name")]);
+    if (cl.error) throw cl.error; if (staff.error) throw staff.error;
+    v.innerHTML = `<h1>Form teachers</h1><p class="muted">Only a class's form teacher (and the administrators) can write the class teacher's comment on report cards. The staff member must have a linked login to sign in and comment.</p><div class="panel">${cl.data.length ? `<div class="tablewrap"><table><thead><tr><th>Class</th><th>Form teacher</th><th></th></tr></thead><tbody>${cl.data.map((c) => `<tr><td>${esc(clsLabel(c))}</td><td><select data-c="${c.id}"><option value="">Not assigned</option>${staff.data.map((x) => `<option value="${x.id}" ${x.id === c.form_teacher_id ? "selected" : ""}>${esc(x.full_name)}</option>`).join("")}</select></td><td><button class="btn" data-save="${c.id}">Save</button></td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">Add classes first.</div>`}<div id="m"></div></div>`;
+    v.onclick = async (e) => {
+      const b = e.target.closest("[data-save]"); if (!b) return; const sel = v.querySelector(`select[data-c="${b.dataset.save}"]`);
+      const { error } = await sb().from("classes").update({ form_teacher_id: sel.value || null }).eq("id", b.dataset.save);
+      msg($("#m"), error ? friendly(error) : "Form teacher saved.", error ? "err" : "ok");
+    };
+  };
+
+  // ---------- School profile (shown on report cards) ----------
+  views.schoolprofile = async function () {
+    const v = $("#view"); const { data: sch, error } = await sb().from("schools").select("*").eq("id", sid()).single(); if (error) throw error;
+    v.innerHTML = `<h1>School profile</h1><p class="muted">These details print at the top of every report card.</p><div class="panel"><form id="f" style="max-width:480px"><label for="pn">School name</label><input id="pn" value="${esc(sch.name)}" required maxlength="150"><label for="pm">Motto</label><input id="pm" value="${esc(sch.motto || "")}" maxlength="120"><label for="pa">Address</label><input id="pa" value="${esc(sch.address || "")}" maxlength="200"><label for="pp">Phone</label><input id="pp" value="${esc(sch.phone || "")}" inputmode="tel"><label for="pe">Email</label><input id="pe" type="email" value="${esc(sch.email || "")}"><div id="m"></div><button class="btn" style="margin-top:.6rem">Save school profile</button></form></div>`;
+    $("#f").onsubmit = async (e) => {
+      e.preventDefault(); const row = { name: $("#pn").value.trim(), motto: $("#pm").value.trim() || null, address: $("#pa").value.trim() || null, phone: $("#pp").value.trim() || null, email: $("#pe").value.trim() || null };
+      if (row.name.length < 2) return msg($("#m"), "Enter the school name.");
+      const r = await sb().from("schools").update(row).eq("id", sid()); if (r.error) return msg($("#m"), friendly(r.error));
+      Object.assign(st.ctx.school, row); S.go("schoolprofile");
+    };
+  };
+
   // ---------- Report card ----------
   views.reportcard = async function () {
     const v = $("#view"), rc = st.rc; if (!rc) return S.go("dashboard");
-    const mgr = S.isManager(), canComment = mgr || st.ctx.role === "teacher";
+    const mgr = S.isManager(), isTeacher = st.ctx.role === "teacher";
     const [stu, sc, subj, card, stand, scale] = await Promise.all([
       sb().from("students").select("*").eq("id", rc.student).single(),
       sb().from("scores").select("*").eq("student_id", rc.student).eq("term_id", rc.term),
@@ -153,22 +178,33 @@
     ]);
     if (stu.error) throw stu.error; if (sc.error) throw sc.error;
     const s = stu.data, sn = Object.fromEntries((subj.data || []).map((x) => [x.id, x.name])), c = card.data || {}, sd = (stand.data && stand.data[0]) || null;
-    const cls = await sb().from("classes").select("*").eq("id", s.current_class_id || (sc.data[0] && sc.data[0].class_id)).maybeSingle();
+    const classId = s.current_class_id || (sc.data[0] && sc.data[0].class_id);
+    const cls = classId ? await sb().from("classes").select("*").eq("id", classId).maybeSingle() : { data: null };
+    let canComment = mgr, ftName = "";
+    if (classId) {
+      const f = await sb().rpc("class_form_teacher", { p_class: classId }); ftName = f.data || "";
+      if (!mgr && isTeacher && cls.data && cls.data.form_teacher_id) { const me = await sb().from("staff").select("id").eq("user_id", st.user.id).eq("school_id", sid()).maybeSingle(); canComment = !!(me.data && me.data.id === cls.data.form_teacher_id); }
+    }
     const rows = [...sc.data].sort((a, b) => (sn[a.subject_id] || "").localeCompare(sn[b.subject_id] || ""));
     const ga = sd ? gradeFor(Number(sd.average), scale) : { grade: "", remark: "" };
-    const published = c.status === "published";
+    const published = c.status === "published", sch = st.ctx.school, tm = st.terms.find((x) => x.id === rc.term);
+    const contact = [sch.address, sch.phone, sch.email].filter(Boolean).map(esc).join(" · ");
+    const sig = (label) => `<div style="flex:1;border-top:1px solid currentColor;padding-top:.3rem;text-align:center">${label}</div>`;
+    const ta = (id, val, dis) => `<textarea id="${id}" rows="2" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:.6rem;background:var(--surface);color:var(--text)" ${dis ? "disabled" : ""}>${esc(val || "")}</textarea>`;
     v.innerHTML = `<p class="no-print"><button class="linkbtn" id="back">← Back</button></p>
-    <div class="panel" id="card"><div style="text-align:center"><h1 style="margin-bottom:0">${esc(st.ctx.school.name)}</h1><h2 style="margin:.2rem 0">Terminal report card</h2><div class="muted">${esc(termName(rc.term))}</div></div>
+    <div class="panel" id="card"><div style="text-align:center"><h1 style="margin-bottom:0">${esc(sch.name)}</h1>${sch.motto ? `<div class="muted"><em>${esc(sch.motto)}</em></div>` : ""}${contact ? `<div class="muted" style="font-size:.85rem">${contact}</div>` : ""}<h2 style="margin:.6rem 0 .2rem">Terminal report card</h2><div class="muted">${esc(termName(rc.term))}${tm ? ` · ${esc(S.fmtDate(tm.start_date))} to ${esc(S.fmtDate(tm.end_date))}` : ""}</div></div>
     <p style="margin-top:1rem"><strong>${esc(fullName(s))}</strong> · Admission no. ${esc(s.admission_no)}<br>Class: ${esc(cls.data ? clsLabel(cls.data) : "—")}${sd ? ` · Position: ${esc(ord(sd.rank_pos))} of ${esc(sd.class_size)}` : ""}</p>
     ${rows.length ? `<div class="tablewrap"><table><thead><tr><th>Subject</th><th>CA1<br><small>20</small></th><th>CA2<br><small>20</small></th><th>Exam<br><small>60</small></th><th>Total<br><small>100</small></th><th>Grade</th><th>Remark</th></tr></thead><tbody>${rows.map((r) => { const g = gradeFor(Number(r.total), scale); return `<tr><td>${esc(sn[r.subject_id] || "Subject")}</td><td>${esc(fmt(r.ca1))}</td><td>${esc(fmt(r.ca2))}</td><td>${esc(fmt(r.exam))}</td><td><strong>${esc(fmt(r.total))}</strong></td><td>${esc(g.grade)}</td><td>${esc(g.remark)}</td></tr>`; }).join("")}</tbody></table></div>
     ${sd ? `<p style="margin-top:.8rem">Subjects: <strong>${sd.subjects}</strong> · Total: <strong>${esc(fmt(sd.total))}</strong> · Average: <strong>${esc(fmt(sd.average))}</strong> · Overall grade: <strong>${esc(ga.grade)}</strong> (${esc(ga.remark)})</p>` : ""}` : `<div class="empty">No scores recorded for this term.</div>`}
     <p><strong>Class teacher's comment:</strong> ${esc(c.teacher_comment || "—")}</p><p><strong>Principal's comment:</strong> ${esc(c.principal_comment || "—")}</p>
-    <p class="muted">Status: ${published ? "Published" : "Draft (not yet visible to parents or students)"}. Attendance summary will appear here once the attendance module is added.</p></div>
+    <p class="muted" style="font-size:.8rem">Grading key: ${scale.map((b) => `${esc(b.grade)} ${esc(b.min_score)}–${esc(b.max_score)}`).join(" · ")}</p>
+    <div style="display:flex;gap:2rem;margin-top:2.4rem">${sig("Class teacher" + (ftName ? ": " + esc(ftName) : ""))}${sig("Principal")}${sig("Date")}</div>
+    <p class="muted no-print" style="margin-top:1rem">Status: ${published ? "Published" : "Draft (not yet visible to parents or students)"}</p></div>
     <div class="panel no-print"><button class="btn" id="print">Print / save as PDF</button></div>
-    ${canComment ? `<div class="panel no-print"><h2>Comments</h2><label for="tc">Class teacher's comment</label><textarea id="tc" rows="2" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:.6rem;background:var(--surface);color:var(--text)" ${!mgr && published ? "disabled" : ""}>${esc(c.teacher_comment || "")}</textarea>${mgr ? `<label for="pc">Principal's comment</label><textarea id="pc" rows="2" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:.6rem;background:var(--surface);color:var(--text)">${esc(c.principal_comment || "")}</textarea>` : ""}<div id="m"></div><button class="btn" id="cs" style="margin-top:.6rem">Save comments</button></div>` : ""}`;
+    ${mgr || isTeacher ? `<div class="panel no-print"><h2>Comments</h2>${!mgr && !canComment ? `<p class="muted">Only this class's form teacher can write the class teacher's comment. Ask the administrator to set the form teacher under Form teachers.</p>` : ""}<label for="tc">Class teacher's comment</label>${ta("tc", c.teacher_comment, !canComment || (!mgr && published))}${mgr ? `<label for="pc">Principal's comment</label>${ta("pc", c.principal_comment, false)}` : ""}<div id="m"></div>${canComment ? `<button class="btn" id="cs" style="margin-top:.6rem">Save comments</button>` : ""}</div>` : ""}`;
     $("#back").onclick = () => S.go(rc.back || "dashboard");
     $("#print").onclick = () => window.print();
-    if (canComment) $("#cs").onclick = async () => { const r = await sb().rpc("save_comment", { p_student: rc.student, p_term: rc.term, p_teacher: $("#tc").value, p_principal: mgr ? $("#pc").value : null }); msg($("#m"), r.error ? friendly(r.error) : "Comments saved.", r.error ? "err" : "ok"); };
+    if (canComment && $("#cs")) $("#cs").onclick = async () => { const r = await sb().rpc("save_comment", { p_student: rc.student, p_term: rc.term, p_teacher: $("#tc").value, p_principal: mgr ? $("#pc").value : null }); msg($("#m"), r.error ? friendly(r.error) : "Comments saved.", r.error ? "err" : "ok"); };
   };
 
   // ---------- Parent / student: published report cards ----------
