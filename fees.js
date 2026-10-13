@@ -39,7 +39,7 @@
     if (!ms.length && !bank && !s.payment_note) return "";
     return `<div style="margin-top:1rem;border:1px solid var(--line);border-radius:8px;padding:.7rem"><strong>How to pay</strong>${ms.length ? `<div>Accepted: ${ms.map(esc).join(", ")}</div>` : ""}${bank ? `<div style="margin-top:.3rem">Bank: <strong>${esc(s.bank_name || "")}</strong><br>Account name: <strong>${esc(s.account_name || "")}</strong><br>Account number: <strong>${esc(s.account_number || "")}</strong></div>` : ""}${s.payment_note ? `<div style="margin-top:.3rem">${esc(s.payment_note)}</div>` : ""}<div class="muted" style="font-size:.85rem;margin-top:.3rem">For transfers, use the student's name and invoice number as the narration and keep your payment evidence. A receipt is issued once the school confirms the payment.</div></div>`;
   };
-  const schoolHead = () => { const s = st.ctx.school; const c = [s.address, s.phone, s.email].filter(Boolean).map(esc).join(" · "); return `<div style="text-align:center"><h1 style="margin-bottom:0">${esc(s.name)}</h1>${c ? `<div class="muted" style="font-size:.85rem">${c}</div>` : ""}</div>`; };
+  const schoolHead = () => { const s = st.ctx.school; const c = [s.address, s.phone, s.email].filter(Boolean).map(esc).join(" · "); return `<div style="text-align:center">${s.logo_url ? `<img src="${esc(s.logo_url)}" alt="" style="height:64px;max-width:160px;object-fit:contain;margin-bottom:.3rem">` : ""}<h1 style="margin-bottom:0">${esc(s.name)}</h1>${c ? `<div class="muted" style="font-size:.85rem">${c}</div>` : ""}</div>`; };
 
   // ---------- Fee structure ----------
   views.feesetup = async function () {
