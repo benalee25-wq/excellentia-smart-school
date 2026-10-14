@@ -214,13 +214,14 @@
   views.admissions = async function () {
     const v = $("#view"); const classes = await getClasses();
     const link = location.origin + location.pathname.replace(/[^/]*$/, "") + "apply.html?school=" + encodeURIComponent(st.ctx.school.slug);
-    v.innerHTML = `<h1>Admissions</h1><div class="panel"><h2>Public application link</h2><p>Share this link with parents:</p><p><input readonly value="${esc(link)}" onclick="this.select()" aria-label="Application link"></p></div><div class="panel"><div class="row"><div><label for="fs">Status</label><select id="fs"><option value="">All</option>${Object.entries(APP_STATUS).map(([k, l]) => `<option value="${k}">${l}</option>`).join("")}</select></div><div><label for="ecl">Class to enrol into</label><select id="ecl"><option value="">No class yet</option>${classes.map((c) => `<option value="${c.id}">${esc(clsLabel(c))}</option>`).join("")}</select></div></div><div id="m"></div><div id="list" style="margin-top:.8rem"></div></div>`;
+    v.innerHTML = `<h1>Admissions</h1><div class="panel"><h2>Public application link</h2><p>Share this link with parents:</p><p><input readonly id="alink" value="${esc(link)}" aria-label="Application link"></p></div><div class="panel"><div class="row"><div><label for="fs">Status</label><select id="fs"><option value="">All</option>${Object.entries(APP_STATUS).map(([k, l]) => `<option value="${k}">${l}</option>`).join("")}</select></div><div><label for="ecl">Class to enrol into</label><select id="ecl"><option value="">No class yet</option>${classes.map((c) => `<option value="${c.id}">${esc(clsLabel(c))}</option>`).join("")}</select></div></div><div id="m"></div><div id="list" style="margin-top:.8rem"></div></div>`;
     let all = [];
     async function load() { const { data, error } = await sb().from("admission_applications").select("*").eq("school_id", sid()).order("created_at", { ascending: false }); if (error) throw error; all = data; draw(); }
     function draw() {
       const f = $("#fs").value; mountTable($("#list"), [{ k: "reference_no", label: "Reference" }, { k: "n", label: "Applicant", text: fullName }, { k: "class_applied", label: "Class applied" }, { k: "guardian_name", label: "Guardian" }, { k: "guardian_phone", label: "Phone" }, { k: "created_at", label: "Date", text: (x) => fmtDate(x.created_at) }, { k: "status", label: "Status", text: (x) => APP_STATUS[x.status] }], all.filter((x) => !f || x.status === f), "No applications yet. Share the link above.",
         (x) => x.status === "enrolled" || x.status === "rejected" ? "" : `${x.status === "submitted" ? `<button class="btn ghost" data-st="under_review" data-id="${x.id}">Start review</button> ` : ""}<button class="btn" data-en="${x.id}">Approve &amp; enrol</button> <button class="btn ghost" data-st="rejected" data-id="${x.id}">Reject</button>`);
     }
+    $("#alink").onclick = (e) => e.target.select();
     await load(); $("#fs").onchange = draw;
     v.onclick = async (e) => {
       const b = e.target.closest("button"); if (!b) return;

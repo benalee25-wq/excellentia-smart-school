@@ -18,7 +18,7 @@
       <div class="row"><div><label for="gn">Parent/guardian name *</label><input id="gn" required maxlength="120"></div><div><label for="gp">Phone number *</label><input id="gp" inputmode="tel" required></div></div>
       <label for="ge">Email (optional)</label><input id="ge" type="email">
       <label for="nt">Anything else we should know?</label><input id="nt" maxlength="1000">
-      <p class="muted">We use these details only to process this application, in line with the Nigeria Data Protection Act.</p>
+      <label style="display:flex;gap:.6rem;align-items:flex-start;font-weight:400"><input id="cons" type="checkbox" style="width:auto;min-height:0;margin-top:.25rem"> <span>I am the parent or guardian of this child. I have read the <a href="privacy.html" target="_blank" rel="noopener">privacy notice</a> and agree that the school may use these details to process this application.</span></label>
       <div id="m" role="status"></div>
       <button class="btn" style="width:100%">Submit application</button>
     </form>
@@ -43,8 +43,9 @@
   $('#f').onsubmit=async e=>{
     e.preventDefault();const btn=e.submitter;
     if(!$('#fn').value.trim()||!$('#ln').value.trim()||!$('#gn').value.trim()||$('#gp').value.trim().length<7)return say($('#m'),'Please fill in every field marked *.');
+    if(!$('#cons').checked){return say($('#m'),'Please tick the consent box to continue.');}
     btn.disabled=true;
-    const {data,error}=await sb.rpc('submit_application',{p_slug:slug,p_first:$('#fn').value,p_last:$('#ln').value,p_gender:$('#gd').value,p_dob:$('#dob').value||null,p_class:$('#cl').value,p_guardian:$('#gn').value,p_phone:$('#gp').value,p_email:$('#ge').value,p_notes:$('#nt').value});
+    const {data,error}=await sb.rpc('submit_application',{p_slug:slug,p_first:$('#fn').value,p_last:$('#ln').value,p_gender:$('#gd').value,p_dob:$('#dob').value||null,p_class:$('#cl').value,p_guardian:$('#gn').value,p_phone:$('#gp').value,p_email:$('#ge').value,p_notes:$('#nt').value,p_consent:$('#cons').checked});
     btn.disabled=false;
     if(error)return say($('#m'),esc(error.message));
     $('#f').reset();say($('#m'),'Application received. Your reference number is <strong>'+esc(data)+'</strong>. Keep it, with the phone number you used, to check your status.','ok');

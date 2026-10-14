@@ -321,6 +321,7 @@
     if (st.user) enterApp(); else showAuth();
   }
   function init() {
+    if (window.top !== window.self) { document.documentElement.style.display = "none"; try { window.top.location = window.self.location; } catch (e) {} return; }
     try { const t = localStorage.getItem("ssms_theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
     wire(); setMode("signin");
     if (!cfg.SUPABASE_URL || cfg.SUPABASE_URL.includes("YOUR-PROJECT") || !window.supabase) {
