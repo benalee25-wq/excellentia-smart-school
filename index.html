@@ -7,6 +7,13 @@
 <meta name="referrer" content="no-referrer">
 <title>Excellentia Smart School</title>
 <link rel="stylesheet" href="app.css">
+<style>
+/* Menu fix: dropdowns always open below the header, on top of everything */
+.menu{position:fixed !important;top:var(--menu-top,64px) !important;left:12px !important;right:12px !important;
+  z-index:300 !important;max-height:calc(100vh - var(--menu-top,64px) - 16px);overflow-y:auto}
+@media (min-width:700px){.menu{left:auto !important;right:12px !important;width:320px}}
+.topbar{z-index:200}
+</style>
 </head>
 <body>
 
@@ -90,5 +97,6 @@
 <script src="dashboard.js"></script>
 <script src="timetable.js"></script>
 <script src="learning.js"></script>
+<script src="menufix.js"></script>
 </body>
 </html>
